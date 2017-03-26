@@ -52,19 +52,8 @@ namespace cal
 int main(int argc, char* argv[])
 {
     vec_t ucd;
-    if (argc == 3)
-    {
-         ucd.x = atof(argv[1]);
-         ucd.y = atof(argv[1]);
-         ucd.z = atof(argv[2]);
-    }
-
-    else
-    {
-        ucd.x = 8.8;
-        ucd.y = 8.8;
-        ucd.z = 12.2;
-    }
+    ucd.x = 26.16;
+    ucd.y = 26.16;
 
     /* set cut-off range */
     double rcut = 10.0;
@@ -152,29 +141,70 @@ int main(int argc, char* argv[])
 
     /* replicate uc */
 
+    std::cout << "replicating unit cell...";
     std::vector<atom_t> super;
     int gidcount = 0;
 
     for (int i=0; i<3; ++i)
         for (int j=0; j<3; ++j)
-            for (int k=0; k<3; ++k)
-                for (int site=0; site<uc.size(); ++site)
+            for (int site=0; site<uc.size(); ++site)
+            {
+                atom_t tmp;
+
+                tmp.type = uc[site].type;
+                tmp.aid = uc[site].aid;
+                tmp.pos.x = uc[site].pos.x + i*ucd.x;
+                tmp.pos.y = uc[site].pos.y + j*ucd.y;
+                tmp.pos.z = uc[site].pos.z;
+
+                tmp.gid = gidcount;
+                ++gidcount;
+
+                tmp.k = 0;
+
+                super.push_back(tmp);
+            }
+
+    std::cout << "done\n";
+    std::cout << "searching for duplicates...";
+
+    int duplicate_count = 0;
+
+    /* loop through to delete duplicate atoms */
+    for (int atom=uc.size(); atom<super.size(); ++atom)
+        for (int neighbour=0; neighbour<super.size(); ++neighbour)
+            if (atom != neighbour)
+            {
+                vec_t eij = cal::eij(super[atom].pos, super[neighbour].pos);
+                double rij = eij.length();
+
+                if (rij < 0.1)
                 {
-                    atom_t tmp;
-
-                    tmp.type = uc[site].type;
-                    tmp.aid = uc[site].aid;
-                    tmp.pos.x = uc[site].pos.x + i*ucd.x;
-                    tmp.pos.y = uc[site].pos.y + j*ucd.y;
-                    tmp.pos.z = uc[site].pos.z + k*ucd.z;
-
-                    tmp.gid = gidcount;
-                    ++gidcount;
-
-                    tmp.k = 0;
-
-                    super.push_back(tmp);
+                    super.erase(super.begin() + neighbour);
+                    // std::cout << atom << " and " << neighbour << " are " <<
+                    //     rij << " nm apart. " << neighbour << " removed as duplicate. "
+                    //     << std::endl;
+                    duplicate_count ++;
                 }
+            }
+
+    std::cout << "done" << std::endl;
+    std::cout << duplicate_count << " duplicates removed" << std::endl;
+    std::cout << "total atoms in super cell: " << super.size() << std::endl;
+    std::cout << std::endl;
+    std::cout << "outputting super cell coordinates to supercell.xyz\n";
+
+    std::ofstream superxyz ("supercell.xyz");
+    superxyz << super.size() << "\n\n\n";
+    for (int i=0; i<super.size(); ++i)
+    {
+        if (super[i].type == 0) superxyz << "Fe\t";
+        else if (super[i].type == 1) superxyz << "Nd\t";
+
+        superxyz << super[i].pos.x << "\t"
+            << super[i].pos.y << "\t"
+            << super[i].pos.z << "\n";
+    }
 
     std::cout << "\ncalculating using vector method...\n\n";
     cal::k_vec(super, uc.size(), rcut);
