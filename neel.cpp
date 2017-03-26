@@ -150,41 +150,6 @@ int main(int argc, char* argv[])
     std::cout << "x: " << nd_min.z << " - " << nd_max.z << std::endl;
     std::cout << std::endl;
 
-    /* determine neighbour distance for replication
-     * (necessary when unitcell dimensions unknown,
-     * e.g. with the interface system) */
-
-    vec_t min_dist;
-    min_dist = 100.0;
-
-    for (int atom=0; atom<uc.size(); ++atom)
-        for (int neighbour=0; neighbour<uc.size(); ++neighbour)
-            if (atom != neighbour)
-            {
-                double dx = std::abs(uc[atom].pos.x - uc[neighbour].pos.x);
-                double dy = std::abs(uc[atom].pos.y - uc[neighbour].pos.y);
-                double dz = std::abs(uc[atom].pos.z - uc[neighbour].pos.z);
-
-                if (dz < 1 && dy < 1 && dx < min_dist.x)
-                {
-                    min_dist.x = dx;
-                    std::cout << min_dist.x << "\t" << atom << "\t" << neighbour << std::endl;
-                }
-
-                if (dz < 1e-10 && dx < 1e-10 && dy < min_dist.y)
-                    min_dist.y = dy;
-
-                if (dx < 1e-10 && dy < 1e-10 && dz < min_dist.z)
-                    min_dist.z = dz;
-            }
-
-    std::cout << "shortest distance between sites" << std::endl;
-    std::cout << "in x: " << min_dist.x << std::endl;
-    std::cout << "in y: " << min_dist.y << std::endl;
-    std::cout << "in z: " << min_dist.z << std::endl;
-    std::cout << std::endl;
-
-
     /* replicate uc */
 
     std::vector<atom_t> super;
