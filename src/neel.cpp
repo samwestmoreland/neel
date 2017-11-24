@@ -3,41 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <cstdlib>
-
-/* vector class */
-class vec_t
-{
-    public:
-        double x, y, z;
-
-        double length(void) {
-            return sqrt(x*x+y*y+z*z);
-        }
-
-        vec_t operator - (const vec_t& v)
-        {
-            vec_t vec;
-            vec.x = this->x - v.x;
-            vec.y = this->y - v.y;
-            vec.z = this->z - v.z;
-            return vec;
-        }
-
-        void operator = (const double v)
-        {
-            x = v;
-            y = v;
-            z = v;
-        }
-};
-
-struct atom_t
-{
-    int aid, gid;           /* atom id (uc / global) */
-    int type;               /* species */
-    vec_t pos;                /* position */
-    double k;               /* anisotropy energy */
-};
+#include "../hdr/classes.hpp"
 
 /* prototypes */
 namespace cal
@@ -53,14 +19,14 @@ int main(int argc, char* argv[])
 {
     /* set unit cell dimensions */
     vec_t ucd;
-    ucd.x = 26.16;
-    ucd.y = 26.16;
+    ucd.x = 26.181;
+    ucd.y = 26.181;
 
     /* set cut-off range */
-    double rcut = 10.0;
+    double rcut = 4.5;
 
     /* set name of coordinate file */
-    std::string c_file = "coordinate_files/ndfe12.coords";
+    std::string c_file = "coordinate_files/run00d1_final_frame.coords";
 
     std::ifstream coordfile;
     coordfile.open (c_file.c_str());
@@ -131,12 +97,12 @@ int main(int argc, char* argv[])
     std::cout << "number of Fe atoms: " << fe_count << std::endl;
     std::cout << "number of Nd atoms: " << nd_count << std::endl;
     std::cout << std::endl;
-    std::cout << "Fe atom dimensions:" << std::endl;
+    std::cout << "Fe atoms dimensions:" << std::endl;
     std::cout << "x: " << fe_min.x << " - " << fe_max.x << std::endl;
     std::cout << "y: " << fe_min.y << " - " << fe_max.y << std::endl;
     std::cout << "z: " << fe_min.z << " - " << fe_max.z << std::endl;
     std::cout << std::endl;
-    std::cout << "Nd atom dimensions:" << std::endl;
+    std::cout << "Nd atoms dimensions:" << std::endl;
     std::cout << "x: " << nd_min.x << " - " << nd_max.x << std::endl;
     std::cout << "y: " << nd_min.y << " - " << nd_max.y << std::endl;
     std::cout << "z: " << nd_min.z << " - " << nd_max.z << std::endl;
@@ -188,8 +154,8 @@ int main(int argc, char* argv[])
     std::cout << "\ncalculating using vector method...\n\n";
     cal::k_vec(uc, super, uc.size(), rcut);
 
-//     std::cout << "\ncalculating using tensor method...\n\n";
-//     cal::k_tensor(super, uc.size(), rcut);
+    std::cout << "\ncalculating using tensor method...\n\n";
+    cal::k_tensor(super, uc.size(), rcut);
 
     return EXIT_SUCCESS;
 }
@@ -264,9 +230,9 @@ namespace cal
                         k_hard_nd_atom[i-start] +=
                             cal::lij(super[i].type, super[j].type, rij)
                             * dot(hard, eij) * dot(hard, eij);
-                        std::cout <<
-                            cal::lij(super[i].type, super[j].type, rij)
-                            * dot(hard, eij) * dot(hard, eij) << std::endl;
+//                        std::cout <<
+//                            cal::lij(super[i].type, super[j].type, rij)
+//                            * dot(hard, eij) * dot(hard, eij) << std::endl;
 
                         k_easy_nd_atom[i-start] +=
                             cal::lij(super[i].type, super[j].type, rij)
