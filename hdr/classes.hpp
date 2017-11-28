@@ -29,7 +29,6 @@ struct atom_t
 {
     int aid, gid;           /* atom id (uc / global) */
     int type;               /* species */
-    vec_t pos;                /* position */
+    vec_t pos;              /* position */
     double k;               /* anisotropy energy */
 };
-
