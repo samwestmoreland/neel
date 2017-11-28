@@ -192,6 +192,7 @@ namespace cal
 
     void k_vec(std::vector<atom_t> uc, std::vector<atom_t> super, int ucsize, double rcut)
     {
+        /* determine beginning and end of centre cell */
         int start = (super.size() - ucsize)/2;
         int end = (super.size() + ucsize)/2;
 
@@ -223,7 +224,7 @@ namespace cal
                 /* check atom is within cut off */
                 vec_t eij = cal::eij(super[i].pos, super[j].pos);
                 double rij = eij.length();
-                if (rij < rcut && rij > 1e-35)
+                if (rij <= rcut && rij > 1e-35)
                 {
                     if (super[i].type == 1)
                     {

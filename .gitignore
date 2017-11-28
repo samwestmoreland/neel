@@ -1,3 +1,5 @@
 neel
 *.swp
 *.xyz
+coordinate_files/
+gnuplot*
