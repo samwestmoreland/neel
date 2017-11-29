@@ -218,36 +218,38 @@ namespace cal
       /* loop through centre cell */
       for (int i=start; i<end; ++i)
 
-      /* loop through all atoms */
-      for (int j=0; j<super.size(); ++j)
-      {
-         /* check atom is within cut off */
-         vec_t eij = cal::eij(super[i].pos, super[j].pos);
-         double rij = eij.length();
-         if (rij <= rcut && rij > 1e-35)
+         /* loop through all atoms */
+         for (int j=0; j<super.size(); ++j)
          {
-            /* if atom is Nd */
-            if (super[i].type == 1)
+            /* check atom is within cut off */
+            vec_t eij = cal::eij(super[i].pos, super[j].pos);
+            double rij = eij.length();
+            
+            if (rij <= rcut && rij > 1e-35)
             {
-               k_hard_nd_atom[i-start] +=
-               cal::lij(super[i].type, super[j].type, rij)
-               * dot(hard, eij) * dot(hard, eij);
-               //                        std::cout <<
-               //                            cal::lij(super[i].type, super[j].type, rij)
-               //                            * dot(hard, eij) * dot(hard, eij) << std::endl;
+               /* if atom is Fe */
+               if (super[i].type == 1)
+               {
+                  k_hard_nd_atom[i-start] +=
+                  cal::lij(super[i].type, super[j].type, rij)
+                  * dot(hard, eij) * dot(hard, eij);
 
-               k_easy_nd_atom[i-start] +=
-               cal::lij(super[i].type, super[j].type, rij)
+                  k_easy_nd_atom[i-start] +=
+                  cal::lij(super[i].type, super[j].type, rij)
+                  * dot(easy, eij) * dot(easy, eij);
+
+                  //  std::cout <<
+                  //      cal::lij(super[i].type, super[j].type, rij)
+                  //      * dot(hard, eij) * dot(hard, eij) << std::endl;
+               }
+
+               k_hard += cal::lij(super[i].type, super[j].type, rij)
+               * dot(hard, eij) * dot(hard, eij);
+
+               k_easy += cal::lij(super[i].type, super[j].type, rij)
                * dot(easy, eij) * dot(easy, eij);
             }
-
-            k_hard += cal::lij(super[i].type, super[j].type, rij)
-            * dot(hard, eij) * dot(hard, eij);
-
-            k_easy += cal::lij(super[i].type, super[j].type, rij)
-            * dot(easy, eij) * dot(easy, eij);
          }
-      }
 
       k_hard /= 2.0;
       k_easy /= 2.0;
@@ -318,9 +320,11 @@ namespace cal
          }
       }
 
-      /* because we're just considering hard and easy directions,
-      * lots of terms cancel and we end up only needing
-      * two tensor elements */
+      /*
+       * because we're just considering hard and easy directions,
+       * lots of terms cancel and we end up only needing
+       * two tensor elements
+       */
 
       double k_hard = tensor[0] / 2.0 / (double) ucsize;
       double k_easy = tensor[5] / 2.0 / (double) ucsize;
