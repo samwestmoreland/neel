@@ -9,7 +9,6 @@
 namespace cal
 {
    double dot(vec_t i, vec_t j);
-   vec_t eij(vec_t ipos, vec_t jpos);
    double lij(int itype, int jtype, double r);
    void k_tensor(std::vector<atom_t> super, int ucsize, double rcut);
    void k_vec(std::vector<atom_t> uc, std::vector<atom_t> super, int ucsize, double rcut);
@@ -23,7 +22,7 @@ int main(int argc, char* argv[])
    ucd.y = 26.181;
 
    /* set cut-off range */
-   double rcut = 4.5;
+   double rcut = 5.0;
 
    /* set name of coordinate file */
    std::string c_file = "coordinate_files/run00d1_final_frame.coords";
@@ -58,6 +57,7 @@ int main(int argc, char* argv[])
    while (coordfile >> elstring >> tmp.pos.x >> tmp.pos.y >> tmp.pos.z)
    {
       tmp.aid = aidcount;
+      tmp.gid = aidcount;
       ++aidcount;
       tmp.k = 0;
 
@@ -162,16 +162,14 @@ int main(int argc, char* argv[])
 
 namespace cal
 {
-   vec_t eij(vec_t ipos, vec_t jpos)
-   {
-      return jpos - ipos;
-   }
-
    double lij(int itype, int jtype, double r)
    {
       double lij;
-      double r0 = 5.0;
-      double l0 = -1.0;
+      double r0;
+      double l0;
+
+      r0 = 5.0;
+      l0 = 1.0;
 
       /* fe-fe */
       // if (itype == 0 && jtype == 0) lij = l0*exp(-r/r0);
@@ -212,8 +210,9 @@ namespace cal
       easy.y = 0;
       easy.z = 1;
 
-      std::vector<double> k_hard_nd_atom(ucsize, 0);
-      std::vector<double> k_easy_nd_atom(ucsize, 0);
+      /* initialise arrays for atom resolved hard and easy energies */
+      std::vector<double> k_hard_atom(ucsize, 0);
+      std::vector<double> k_easy_atom(ucsize, 0);
 
       /* loop through centre cell */
       for (int i=start; i<end; ++i)
@@ -221,50 +220,55 @@ namespace cal
          /* loop through all atoms */
          for (int j=0; j<super.size(); ++j)
          {
-            /* check atom is within cut off */
-            vec_t eij = cal::eij(super[i].pos, super[j].pos);
+            /* calculate neighbour vector */
+            vec_t eij = super[j].pos - super[i].pos;
+
+            /* calculate neighbour distance */
             double rij = eij.length();
-            
+
+            /* check if atom is within cut off range */
             if (rij <= rcut && rij > 1e-35)
             {
-               /* if atom is Fe */
-               if (super[i].type == 1)
-               {
-                  k_hard_nd_atom[i-start] +=
-                  cal::lij(super[i].type, super[j].type, rij)
-                  * dot(hard, eij) * dot(hard, eij);
+               /* only calculate energy for Fe atoms */
+               // if (super[i].type == 1)
+               // {
+                  /* add energy to hard energy array */
+                  k_hard_atom[i-start] += cal::lij(super[i].type, super[j].type, rij) * dot(hard, eij) * dot(hard, eij);
 
-                  k_easy_nd_atom[i-start] +=
-                  cal::lij(super[i].type, super[j].type, rij)
-                  * dot(easy, eij) * dot(easy, eij);
+                  /* add energy to easy energy array */
+                  k_easy_atom[i-start] += cal::lij(super[i].type, super[j].type, rij) * dot(easy, eij) * dot(easy, eij);
 
                   //  std::cout <<
                   //      cal::lij(super[i].type, super[j].type, rij)
                   //      * dot(hard, eij) * dot(hard, eij) << std::endl;
-               }
+               // }
 
-               k_hard += cal::lij(super[i].type, super[j].type, rij)
-               * dot(hard, eij) * dot(hard, eij);
+               /* add interaction energy to total hard energy */
+               k_hard += cal::lij(super[i].type, super[j].type, rij) * dot(hard, eij) * dot(hard, eij);
 
-               k_easy += cal::lij(super[i].type, super[j].type, rij)
-               * dot(easy, eij) * dot(easy, eij);
+               /* add interaction energy to total easy energy */
+               k_easy += cal::lij(super[i].type, super[j].type, rij) * dot(easy, eij) * dot(easy, eij);
             }
          }
 
-      k_hard /= 2.0;
-      k_easy /= 2.0;
-      k = (k_hard - k_easy) / (double) ucsize;
+      /* divide by factor 2, as per neel energy expression */   
+      k_hard /= 2.0 * ucsize;
+      k_easy /= 2.0 * ucsize;
 
-      std::ofstream ndkout ("nd_k.output");
+      /* k is then the difference between hard and easy energies */
+      k = (k_hard - k_easy);
+
+      /* output stream for atom resolved energies */
+      std::ofstream kout ("k.dat");
 
       for (int i=0; i<ucsize; ++i)
       {
          if (uc[i].type == 1)
-         ndkout << i << "\t"
+         kout << i << "\t"
          << uc[i].pos.z << "\t"
-         << k_hard_nd_atom[i] << "\t"
-         << k_easy_nd_atom[i] << "\t"
-         << k_hard_nd_atom[i] - k_easy_nd_atom[i]
+         << k_hard_atom[i] << "\t"
+         << k_easy_atom[i] << "\t"
+         << k_hard_atom[i] - k_easy_atom[i]
          << std::endl;
       }
 
@@ -293,7 +297,6 @@ namespace cal
       easy.y = 0;
       easy.z = 1;
 
-      int total_pairs = 0;
       int pairs_within_range = 0;
 
       /* loop through centre cell */
@@ -303,9 +306,8 @@ namespace cal
       for (int j=0; j<super.size(); ++j)
       {
          /* check atom is within cut off */
-         vec_t eij = cal::eij(super[i].pos, super[j].pos);
+         vec_t eij = super[j].pos - super[i].pos;
          double rij = eij.length();
-         total_pairs ++;
          if (rij < rcut && rij > 1e-35)
          {
             pairs_within_range ++;
