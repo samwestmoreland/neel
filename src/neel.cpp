@@ -61,6 +61,7 @@ int main(int argc, char* argv[])
       ++aidcount;
       tmp.k = 0;
 
+      /* determine min and max coordinates for each species */
       if (elstring == "Fe")
       {
          tmp.type = 0;
@@ -172,7 +173,7 @@ namespace cal
       l0 = 1.0;
 
       /* fe-fe */
-      // if (itype == 0 && jtype == 0) lij = l0*exp(-r/r0);
+      if (itype == 0) lij = l0*exp(-r/r0);
 
       /* nd-* */
       if (itype == 1) lij = l0*exp(-r/r0);
@@ -183,9 +184,7 @@ namespace cal
 
    double dot(vec_t i, vec_t j)
    {
-      return i.x*j.x
-      +  i.y*j.y
-      +  i.z*j.z;
+      return i.x*j.x + i.y*j.y + i.z*j.z;
    }
 
    void k_vec(std::vector<atom_t> uc, std::vector<atom_t> super, int ucsize, double rcut)
@@ -194,9 +193,14 @@ namespace cal
       int start = (super.size() - ucsize)/2;
       int end = (super.size() + ucsize)/2;
 
-      double k_hard = 0;
-      double k_easy = 0;
-      double k;
+      double knd_hard = 0;
+      double knd_easy = 0;
+
+      double kfe_hard = 0;
+      double kfe_easy = 0;
+
+      double knd;
+      double kfe;
 
       /* hard direction */
       vec_t hard;
@@ -229,34 +233,47 @@ namespace cal
             /* check if atom is within cut off range */
             if (rij <= rcut && rij > 1e-35)
             {
-               /* only calculate energy for Fe atoms */
-               // if (super[i].type == 1)
-               // {
-                  /* add energy to hard energy array */
-                  k_hard_atom[i-start] += cal::lij(super[i].type, super[j].type, rij) * dot(hard, eij) * dot(hard, eij);
+               /* add energy to hard energy array */
+               k_hard_atom[i-start] += cal::lij(super[i].type, super[j].type, rij) * dot(hard, eij) * dot(hard, eij);
 
-                  /* add energy to easy energy array */
-                  k_easy_atom[i-start] += cal::lij(super[i].type, super[j].type, rij) * dot(easy, eij) * dot(easy, eij);
+               /* add energy to easy energy array */
+               k_easy_atom[i-start] += cal::lij(super[i].type, super[j].type, rij) * dot(easy, eij) * dot(easy, eij);
 
                   //  std::cout <<
-                  //      cal::lij(super[i].type, super[j].type, rij)
+                  //      cal::lij(super[i].type, super[j].type, rijk)
                   //      * dot(hard, eij) * dot(hard, eij) << std::endl;
-               // }
 
-               /* add interaction energy to total hard energy */
-               k_hard += cal::lij(super[i].type, super[j].type, rij) * dot(hard, eij) * dot(hard, eij);
+               /* if atom is Nd */
+               if (super[i].type == 1)
+               {
+                  /* add interaction energy to total hard energy */
+                  knd_hard += cal::lij(super[i].type, super[j].type, rij) * dot(hard, eij) * dot(hard, eij);
 
-               /* add interaction energy to total easy energy */
-               k_easy += cal::lij(super[i].type, super[j].type, rij) * dot(easy, eij) * dot(easy, eij);
+                  /* add interaction energy to total easy energy */
+                  knd_easy += cal::lij(super[i].type, super[j].type, rij) * dot(easy, eij) * dot(easy, eij);
+               }
+
+               /* if atom is Fe */
+               else if (super[i].type == 0)
+               {
+                  kfe_hard += cal::lij(super[i].type, super[j].type, rij) * dot(hard, eij) * dot(hard, eij);
+
+                  kfe_easy += cal::lij(super[i].type, super[j].type, rij) * dot(easy, eij) * dot(easy, eij);
+               }
             }
          }
 
-      /* divide by factor 2, as per neel energy expression */   
-      k_hard /= 2.0 * ucsize;
-      k_easy /= 2.0 * ucsize;
+      /* divide by factor 2, as per neel expression */   
+      knd_hard /= 2.0;
+      knd_easy /= 2.0;
+      kfe_hard /= 2.0;
+      kfe_easy /= 2.0;
 
       /* k is then the difference between hard and easy energies */
-      k = (k_hard - k_easy);
+      knd = (knd_hard - knd_easy);
+      kfe = (kfe_hard - kfe_easy);
+
+      double ktotal = knd + kfe;
 
       /* output stream for atom resolved energies */
       std::ofstream kout ("k.dat");
@@ -272,9 +289,15 @@ namespace cal
          << std::endl;
       }
 
-      std::cout << "k_hard = " << k_hard << "\n";
-      std::cout << "k_easy = " << k_easy << "\n";
-      std::cout << "k = " << k << "\n";
+      std::cout << "knd_hard = " << knd_hard << "\n";
+      std::cout << "knd_easy = " << knd_easy << "\n";
+      std::cout << "knd = " << knd << "\n\n";
+
+      std::cout << "kfe_hard = " << kfe_hard << "\n";
+      std::cout << "kfe_easy = " << kfe_easy << "\n";
+      std::cout << "kfe = " << kfe << "\n\n";
+
+      std::cout << "k = " << ktotal << "\n";
    }
 
    void k_tensor(std::vector<atom_t> super, int ucsize, double rcut)
@@ -328,13 +351,13 @@ namespace cal
        * two tensor elements
        */
 
-      double k_hard = tensor[0] / 2.0 / (double) ucsize;
-      double k_easy = tensor[5] / 2.0 / (double) ucsize;
+      double k_hard = tensor[0] / 2.0;
+      double k_easy = tensor[5] / 2.0;
       double k = (k_hard - k_easy);
 
       std::cout << "k_hard = " << k_hard << "\n";
       std::cout << "k_easy = " << k_easy << "\n";
-      std::cout << "k = " << k << "\n";
+      std::cout << "k = " << k << "\n\n";
       std::cout << "pairs in range = " << pairs_within_range << "\n";
    }
 
