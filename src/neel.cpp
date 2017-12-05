@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <cstdlib>
+#include <ctime>
 #include "../hdr/classes.hpp"
 
 /* prototypes */
@@ -153,10 +154,30 @@ int main(int argc, char* argv[])
    }
 
    std::cout << "\ncalculating using vector method...\n\n";
+
+   std::clock_t start_vector;
+   double vector_duration;
+
+   start_vector = std::clock();
+
    cal::k_vec(uc, super, uc.size(), rcut);
 
+   vector_duration = (std::clock() - start_vector) / (double) CLOCKS_PER_SEC;
+
    std::cout << "\ncalculating using tensor method...\n\n";
+
+   std::clock_t start_tensor;
+   double tensor_duration;
+
+   start_tensor = std::clock();
+
    cal::k_tensor(super, uc.size(), rcut);
+
+   tensor_duration = (std::clock() - start_tensor) / (double) CLOCKS_PER_SEC;
+
+   std::cout << "vector calculation time: " << vector_duration << "s" << std::endl;
+   std::cout << "tensor calculation time: " << tensor_duration << "s" << std::endl;
+   std::cout << std::endl;
 
    return EXIT_SUCCESS;
 }
