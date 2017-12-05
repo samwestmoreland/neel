@@ -121,8 +121,8 @@ int main(int argc, char* argv[])
    {
       atom_t tmp;
 
-      tmp.type = uc[site].type;
-      tmp.aid = uc[site].aid;
+      tmp.type  = uc[site].type;
+      tmp.aid   = uc[site].aid;
       tmp.pos.x = uc[site].pos.x + i*ucd.x;
       tmp.pos.y = uc[site].pos.y + j*ucd.y;
       tmp.pos.z = uc[site].pos.z;
@@ -148,8 +148,8 @@ int main(int argc, char* argv[])
       else if (super[i].type == 1) superxyz << "Nd\t";
 
       superxyz << super[i].pos.x << "\t"
-      << super[i].pos.y << "\t"
-      << super[i].pos.z << "\n";
+               << super[i].pos.y << "\t"
+               << super[i].pos.z << "\n";
    }
 
    std::cout << "\ncalculating using vector method...\n\n";
@@ -172,11 +172,12 @@ namespace cal
       r0 = 5.0;
       l0 = 1.0;
 
-      /* fe-fe */
+      /* fe */
       if (itype == 0) lij = l0*exp(-r/r0);
 
-      /* nd-* */
-      if (itype == 1) lij = l0*exp(-r/r0);
+      /* nd */
+      else if (itype == 1) lij = l0*exp(-r/r0);
+
       else lij = 0;
 
       return lij;
@@ -282,11 +283,11 @@ namespace cal
       {
          if (uc[i].type == 1)
          kout << i << "\t"
-         << uc[i].pos.z << "\t"
-         << k_hard_atom[i] << "\t"
-         << k_easy_atom[i] << "\t"
-         << k_hard_atom[i] - k_easy_atom[i]
-         << std::endl;
+              << uc[i].pos.z << "\t"
+              << k_hard_atom[i] << "\t"
+              << k_easy_atom[i] << "\t"
+              << k_hard_atom[i] - k_easy_atom[i]
+              << std::endl;
       }
 
       std::cout << "knd_hard = " << knd_hard << "\n";
