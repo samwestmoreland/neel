@@ -3,3 +3,6 @@ neel
 *.xyz
 coordinate_files/
 gnuplot*
+*.pdf
+*.eps
+*.dat

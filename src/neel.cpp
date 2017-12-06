@@ -302,8 +302,9 @@ namespace cal
 
       for (int i=0; i<ucsize; ++i)
       {
-         if (uc[i].type == 1)
+         // if (uc[i].type == 1)
          kout << i << "\t"
+              << uc[i].type << "\t"
               << uc[i].pos.z << "\t"
               << k_hard_atom[i] << "\t"
               << k_easy_atom[i] << "\t"
@@ -342,7 +343,7 @@ namespace cal
       easy.y = 0;
       easy.z = 1;
 
-      int pairs_within_range = 0;
+      // int pairs_within_range = 0;
 
       /* loop through centre cell */
       for (int i=start; i<end; ++i)
@@ -355,7 +356,7 @@ namespace cal
          double rij = eij.length();
          if (rij < rcut && rij > 1e-35)
          {
-            pairs_within_range ++;
+            // pairs_within_range ++;
             double lij = cal::lij(super[i].type, super[j].type, rij);
 
             tensor[0] += eij.x * eij.x * lij;
@@ -380,7 +381,7 @@ namespace cal
       std::cout << "k_hard = " << k_hard << "\n";
       std::cout << "k_easy = " << k_easy << "\n";
       std::cout << "k = " << k << "\n\n";
-      std::cout << "pairs in range = " << pairs_within_range << "\n";
+      // std::cout << "pairs in range = " << pairs_within_range << "\n";
    }
 
 } /* end of namespace cal */
