@@ -10,7 +10,7 @@
 namespace cal
 {
    double dot(vec_t i, vec_t j);
-   double lij(int itype, int jtype, double r);
+   double lij(int itype, int jtype, double r, bool constant);
    void k_tensor(std::vector<atom_t> super, int ucsize, double rcut);
    void k_vec(std::vector<atom_t> uc, std::vector<atom_t> super, int ucsize, double rcut);
 }
@@ -184,33 +184,39 @@ int main(int argc, char* argv[])
 
 namespace cal
 {
-   double lij(int itype, int jtype, double r)
-   {
+   double lij(int itype, int jtype, double r, bool constant) {
+
       double lij;
-      double r0;
-      double l0;
 
-      r0 = 5.0;
-      l0 = 1.0;
+      if (constant) {
 
-      /* fe */
-      if (itype == 0) lij = l0*exp(-r/r0);
+         double r0;
+         double l0;
 
-      /* nd */
-      else if (itype == 1) lij = l0*exp(-r/r0);
+         r0 = 5.0;
+         l0 = 1.0;
 
-      else lij = 0;
+         /* fe (fe-fe or both fe-fe and fe-nd) */
+         if (itype == 0) lij = l0*exp(-r/r0);
+
+         /* nd */
+         else if (itype == 1) lij = l0*exp(-r/r0);
+
+         else lij = 0;
+
+      }
+
+      else lij = 1.0;
 
       return lij;
    }
 
-   double dot(vec_t i, vec_t j)
-   {
+   double dot(vec_t i, vec_t j) {
       return i.x*j.x + i.y*j.y + i.z*j.z;
    }
 
-   void k_vec(std::vector<atom_t> uc, std::vector<atom_t> super, int ucsize, double rcut)
-   {
+   void k_vec(std::vector<atom_t> uc, std::vector<atom_t> super, int ucsize, double rcut) {
+
       /* determine beginning and end of centre cell */
       int start = (super.size() - ucsize)/2;
       int end = (super.size() + ucsize)/2;
@@ -256,10 +262,10 @@ namespace cal
             if (rij <= rcut && rij > 1e-35)
             {
                /* add energy to hard energy array */
-               k_hard_atom[i-start] += cal::lij(super[i].type, super[j].type, rij) * dot(hard, eij) * dot(hard, eij);
+               k_hard_atom[i-start] += cal::lij(super[i].type, super[j].type, rij, false) * dot(hard, eij) * dot(hard, eij);
 
                /* add energy to easy energy array */
-               k_easy_atom[i-start] += cal::lij(super[i].type, super[j].type, rij) * dot(easy, eij) * dot(easy, eij);
+               k_easy_atom[i-start] += cal::lij(super[i].type, super[j].type, rij, false) * dot(easy, eij) * dot(easy, eij);
 
                   //  std::cout <<
                   //      cal::lij(super[i].type, super[j].type, rijk)
@@ -269,18 +275,18 @@ namespace cal
                if (super[i].type == 1)
                {
                   /* add interaction energy to total hard energy */
-                  knd_hard += cal::lij(super[i].type, super[j].type, rij) * dot(hard, eij) * dot(hard, eij);
+                  knd_hard += cal::lij(super[i].type, super[j].type, rij, false) * dot(hard, eij) * dot(hard, eij);
 
                   /* add interaction energy to total easy energy */
-                  knd_easy += cal::lij(super[i].type, super[j].type, rij) * dot(easy, eij) * dot(easy, eij);
+                  knd_easy += cal::lij(super[i].type, super[j].type, rij, false) * dot(easy, eij) * dot(easy, eij);
                }
 
                /* if atom is Fe */
                else if (super[i].type == 0)
                {
-                  kfe_hard += cal::lij(super[i].type, super[j].type, rij) * dot(hard, eij) * dot(hard, eij);
+                  kfe_hard += cal::lij(super[i].type, super[j].type, rij, false) * dot(hard, eij) * dot(hard, eij);
 
-                  kfe_easy += cal::lij(super[i].type, super[j].type, rij) * dot(easy, eij) * dot(easy, eij);
+                  kfe_easy += cal::lij(super[i].type, super[j].type, rij, false) * dot(easy, eij) * dot(easy, eij);
                }
             }
          }
@@ -303,12 +309,12 @@ namespace cal
       for (int i=0; i<ucsize; ++i)
       {
          // if (uc[i].type == 1)
-         kout << i << "\t"
-              << uc[i].type << "\t"
-              << uc[i].pos.z << "\t"
-              << k_hard_atom[i] << "\t"
-              << k_easy_atom[i] << "\t"
-              << k_hard_atom[i] - k_easy_atom[i]
+         kout << i << "\t"                         //	   1	atom id
+              << uc[i].type << "\t"                //	   2	atom type
+              << uc[i].pos.z << "\t"               //	   3	z coordinate
+              << k_hard_atom[i] << "\t"            //	   4	hard energy
+              << k_easy_atom[i] << "\t"				//	   5	easy energy
+              << k_hard_atom[i] - k_easy_atom[i]	//	   6	anisotropy energy
               << std::endl;
       }
 
@@ -357,7 +363,7 @@ namespace cal
          if (rij < rcut && rij > 1e-35)
          {
             // pairs_within_range ++;
-            double lij = cal::lij(super[i].type, super[j].type, rij);
+            double lij = cal::lij(super[i].type, super[j].type, rij, true);
 
             tensor[0] += eij.x * eij.x * lij;
             tensor[1] += eij.x * eij.y * lij;
