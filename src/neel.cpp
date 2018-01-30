@@ -11,8 +11,8 @@ namespace cal
 {
    double dot(vec_t i, vec_t j);
    double lij(int itype, int jtype, double r, bool constant);
-   void k_tensor(std::vector<atom_t> super, int ucsize, double rcut);
-   void k_vec(std::vector<atom_t> uc, std::vector<atom_t> super, int ucsize, double rcut);
+   void k_tensor(std::vector<atom_t> super, int ucsize, double rcut, bool constant);
+   void k_vec(std::vector<atom_t> uc, std::vector<atom_t> super, int ucsize, double rcut, bool constant);
 }
 
 int main(int argc, char* argv[])
@@ -160,7 +160,7 @@ int main(int argc, char* argv[])
 
    start_vector = std::clock();
 
-   cal::k_vec(uc, super, uc.size(), rcut);
+   cal::k_vec(uc, super, uc.size(), rcut, false);
 
    vector_duration = (std::clock() - start_vector) / (double) CLOCKS_PER_SEC;
 
@@ -171,7 +171,7 @@ int main(int argc, char* argv[])
 
    start_tensor = std::clock();
 
-   cal::k_tensor(super, uc.size(), rcut);
+   cal::k_tensor(super, uc.size(), rcut, false);
 
    tensor_duration = (std::clock() - start_tensor) / (double) CLOCKS_PER_SEC;
 
@@ -184,16 +184,22 @@ int main(int argc, char* argv[])
 
 namespace cal
 {
-   double lij(int itype, int jtype, double r, bool constant) {
+   double lij(int itype,         // atom i element
+              int jtype,         // atom j element
+              double r,          // atom separation
+              bool constant ) {  // constant lij or distance dependent
 
       double lij;
 
       if (constant) {
+         lij = 1.0;
+      }
 
+      else {
          double r0;
          double l0;
 
-         r0 = 5.0;
+         r0 = 2.5;
          l0 = 1.0;
 
          /* fe (fe-fe or both fe-fe and fe-nd) */
@@ -203,10 +209,7 @@ namespace cal
          else if (itype == 1) lij = l0*exp(-r/r0);
 
          else lij = 0;
-
       }
-
-      else lij = 1.0;
 
       return lij;
    }
@@ -215,7 +218,11 @@ namespace cal
       return i.x*j.x + i.y*j.y + i.z*j.z;
    }
 
-   void k_vec(std::vector<atom_t> uc, std::vector<atom_t> super, int ucsize, double rcut) {
+   void k_vec (std::vector<atom_t> uc,
+               std::vector<atom_t> super,
+               int ucsize,
+               double rcut,
+               bool constant) {
 
       /* determine beginning and end of centre cell */
       int start = (super.size() - ucsize)/2;
@@ -262,10 +269,10 @@ namespace cal
             if (rij <= rcut && rij > 1e-35)
             {
                /* add energy to hard energy array */
-               k_hard_atom[i-start] += cal::lij(super[i].type, super[j].type, rij, false) * dot(hard, eij) * dot(hard, eij);
+               k_hard_atom[i-start] += cal::lij(super[i].type, super[j].type, rij, constant) * dot(hard, eij) * dot(hard, eij);
 
                /* add energy to easy energy array */
-               k_easy_atom[i-start] += cal::lij(super[i].type, super[j].type, rij, false) * dot(easy, eij) * dot(easy, eij);
+               k_easy_atom[i-start] += cal::lij(super[i].type, super[j].type, rij, constant) * dot(easy, eij) * dot(easy, eij);
 
                   //  std::cout <<
                   //      cal::lij(super[i].type, super[j].type, rijk)
@@ -275,23 +282,23 @@ namespace cal
                if (super[i].type == 1)
                {
                   /* add interaction energy to total hard energy */
-                  knd_hard += cal::lij(super[i].type, super[j].type, rij, false) * dot(hard, eij) * dot(hard, eij);
+                  knd_hard += cal::lij(super[i].type, super[j].type, rij, constant) * dot(hard, eij) * dot(hard, eij);
 
                   /* add interaction energy to total easy energy */
-                  knd_easy += cal::lij(super[i].type, super[j].type, rij, false) * dot(easy, eij) * dot(easy, eij);
+                  knd_easy += cal::lij(super[i].type, super[j].type, rij, constant) * dot(easy, eij) * dot(easy, eij);
                }
 
                /* if atom is Fe */
                else if (super[i].type == 0)
                {
-                  kfe_hard += cal::lij(super[i].type, super[j].type, rij, false) * dot(hard, eij) * dot(hard, eij);
+                  kfe_hard += cal::lij(super[i].type, super[j].type, rij, constant) * dot(hard, eij) * dot(hard, eij);
 
-                  kfe_easy += cal::lij(super[i].type, super[j].type, rij, false) * dot(easy, eij) * dot(easy, eij);
+                  kfe_easy += cal::lij(super[i].type, super[j].type, rij, constant) * dot(easy, eij) * dot(easy, eij);
                }
             }
          }
 
-      /* divide by factor 2, as per neel expression */   
+      /* divide by factor 2, as per neel expression */
       knd_hard /= 2.0;
       knd_easy /= 2.0;
       kfe_hard /= 2.0;
