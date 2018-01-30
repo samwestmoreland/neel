@@ -94,10 +94,13 @@ int main(int argc, char* argv[])
    std::cout << "done" << "\n\n";
 
    std::cout << "system info" << std::endl;
-   std::cout << "===============================" << std::endl;
+   std::cout << "-----------" << std::endl;
    std::cout << std::endl;
    std::cout << "number of Fe atoms: " << fe_count << std::endl;
    std::cout << "number of Nd atoms: " << nd_count << std::endl;
+   std::cout << "total number atoms: " << nd_count + fe_count << std::endl;
+   std::cout << std::endl;
+   std::cout << "cut off radius: " << rcut << "A" << std::endl;
    std::cout << std::endl;
    std::cout << "Fe atoms dimensions:" << std::endl;
    std::cout << "x: " << fe_min.x << " - " << fe_max.x << std::endl;
@@ -200,7 +203,7 @@ namespace cal
          double l0;
 
          r0 = 2.5;
-         l0 = 1.0;
+         l0 = -1.0e-23;
 
          /* fe (fe-fe or both fe-fe and fe-nd) */
          if (itype == 0) lij = l0*exp(-r/r0);
@@ -336,65 +339,91 @@ namespace cal
       std::cout << "k = " << ktotal << "\n";
    }
 
-   void k_tensor(std::vector<atom_t> super, int ucsize, double rcut)
+   void k_tensor(std::vector<atom_t> super, int ucsize, double rcut, bool constant)
    {
       int start = (super.size() - ucsize)/2;
       int end = (super.size() + ucsize)/2;
 
       /* initialise system tensor */
-      std::vector<double> tensor (6, 0);
+      std::vector<double> system_tensor (6, 0);
 
-      /* hard direction */
-      vec_t hard;
-      hard.x = 1;
-      hard.y = 0;
-      hard.z = 0;
+      /* initialise tensor for every atom */
+      std::vector<std::vector<double> > tensor (ucsize);
 
-      /* easy direction */
-      vec_t easy;
-      easy.x = 0;
-      easy.y = 0;
-      easy.z = 1;
+      for (int i=0; i<ucsize; ++i) {
+         tensor[i].resize(6);
+      }
+
+      /* temporary file stream for tensor output */
+      std::ofstream tensor_out ("tensor.dat");
 
       // int pairs_within_range = 0;
 
       /* loop through centre cell */
-      for (int i=start; i<end; ++i)
+      for (int i=start; i<end; ++i) {
 
-      /* loop through all atoms */
-      for (int j=0; j<super.size(); ++j)
-      {
-         /* check atom is within cut off */
-         vec_t eij = super[j].pos - super[i].pos;
-         double rij = eij.length();
-         if (rij < rcut && rij > 1e-35)
-         {
-            // pairs_within_range ++;
-            double lij = cal::lij(super[i].type, super[j].type, rij, true);
+         /* loop through all atoms */
+         for (int j=0; j<super.size(); ++j) {
 
-            tensor[0] += eij.x * eij.x * lij;
-            tensor[1] += eij.x * eij.y * lij;
-            tensor[2] += eij.x * eij.z * lij;
-            tensor[3] += eij.y * eij.y * lij;
-            tensor[4] += eij.y * eij.z * lij;
-            tensor[5] += eij.z * eij.z * lij;
-         }
+            /* check atom is within cut off */
+            vec_t eij = super[j].pos - super[i].pos;
+            double rij = eij.length();
+            if (rij < rcut && rij > 1e-35) {
+
+               // pairs_within_range ++;
+               double lij = cal::lij(super[i].type, super[j].type, rij, constant);
+
+               tensor[i-start][0] += eij.x * eij.x * lij;
+               tensor[i-start][1] += eij.x * eij.y * lij;
+               tensor[i-start][2] += eij.x * eij.z * lij;
+               tensor[i-start][3] += eij.y * eij.y * lij;
+               tensor[i-start][4] += eij.y * eij.z * lij;
+               tensor[i-start][5] += eij.z * eij.z * lij;
+
+               system_tensor[0] += eij.x * eij.x * lij;
+               system_tensor[1] += eij.x * eij.y * lij;
+               system_tensor[2] += eij.x * eij.z * lij;
+               system_tensor[3] += eij.y * eij.y * lij;
+               system_tensor[4] += eij.y * eij.z * lij;
+               system_tensor[5] += eij.z * eij.z * lij;
+
+            }
+
+
+         } /* end of neighbour loop */
+
+         tensor_out << i-start << "\t";
+         tensor_out << tensor[i-start][0] << "\t";
+         tensor_out << tensor[i-start][1] << "\t";
+         tensor_out << tensor[i-start][2] << "\t";
+         tensor_out << tensor[i-start][3] << "\t";
+         tensor_out << tensor[i-start][4] << "\t";
+         tensor_out << tensor[i-start][5] << "\n";
+
+      } /* end of first atom loop */
+
+      std::cout << "tensor elements: \n";
+      for (int element=0; element<6; ++element) {
+         std::cout << "tensor[" << element << "] = " << system_tensor[element] << "\n";
       }
 
+      std::cout << std::endl;
+ 
       /*
        * because we're just considering hard and easy directions,
        * lots of terms cancel and we end up only needing
        * two tensor elements
        */
+ 
+         double k_hard = system_tensor[0] / 2.0;
+         double k_easy = system_tensor[5] / 2.0;
+         double k = (k_hard - k_easy);
 
-      double k_hard = tensor[0] / 2.0;
-      double k_easy = tensor[5] / 2.0;
-      double k = (k_hard - k_easy);
+         std::cout << "k_hard = " << k_hard << "\n";
+         std::cout << "k_easy = " << k_easy << "\n";
+         std::cout << "k = " << k << "\n\n";
+         // std::cout << "pairs in range = " << pairs_within_range << "\n";
 
-      std::cout << "k_hard = " << k_hard << "\n";
-      std::cout << "k_easy = " << k_easy << "\n";
-      std::cout << "k = " << k << "\n\n";
-      // std::cout << "pairs in range = " << pairs_within_range << "\n";
-   }
+      }
 
 } /* end of namespace cal */
