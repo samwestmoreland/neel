@@ -1,3 +1,3 @@
-material = mirror_shifted
+material = interface
 cut off radius = 3.2
-angle increment = 3
+angle increment = 5

@@ -10,7 +10,7 @@
 
 int read_inputfile() {
 
-   std::cout << "\nreading input file...";
+   std::cout << "\nreading input file..." << std::endl;;
    std::ifstream inputfile ("neel.in");
 
    /* exit if no input file found */
@@ -72,8 +72,6 @@ int read_inputfile() {
 
    get_unitcell_dimensions();
 
-   std::cout << "done.\n";
-
    return EXIT_SUCCESS;
 
 }
@@ -81,7 +79,9 @@ int read_inputfile() {
 int read_coordinates() {
 
    /* coordinate file name */
-   std::string coord_file = "./coordinates/" + mat.name + ".coords";
+   std::string coord_file;
+   if (mat.name == "interface") coord_file = "./coordinates/mirror_shifted.coords";
+   else coord_file = "./coordinates/" + mat.name + ".coords";
 
    /* initialise filestream for coordinate file */
    std::ifstream coordstream (coord_file.c_str());
@@ -92,7 +92,7 @@ int read_coordinates() {
    /* check that coordinate file opened correctly */
    if (coordstream.is_open()) {
 
-      std::cout << "reading in coordinates...";
+      std::cout << "reading in coordinates from \"" << coord_file << "\"...";
 
       atom_t tmp;
       int atom_count = 0;
@@ -106,7 +106,7 @@ int read_coordinates() {
          atom_count ++;
 
          /* scale coordinates to unit cell dimensions */
-         tmp.pos = tmp.pos * mat.ucd;
+         if (mat.name != "interface") tmp.pos = tmp.pos * mat.ucd;
 
          /* initialise tensors to 0 */
          for (int i=0; i<6; ++i) tmp.ktensor[i] = 0.0;
@@ -119,8 +119,6 @@ int read_coordinates() {
          else if (tmp.is_re()) re_count ++;
 
       }
-
-      std::cout << "done.\n";
 
    }
 
@@ -241,6 +239,22 @@ int get_unitcell_dimensions() {
       mat.ucd.x = 2.856;
       mat.ucd.y = 2.856;
       mat.ucd.z = 2.856;
+
+   }
+
+   else if (mat.name == "interface") {
+
+      mat.ucd.x = 26.403;
+      mat.ucd.y = 26.403;
+      mat.ucd.z = 255.93180;
+
+   }
+
+   else if (mat.name == "ndfeb") {
+
+      mat.ucd.x = 8.8;
+      mat.ucd.y = 8.8;
+      mat.ucd.z = 12.2;
 
    }
 

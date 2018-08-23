@@ -3,6 +3,7 @@
 
 #include <string>
 #include <cmath>
+#include <iostream>
 
 class vec_t {
 public:
@@ -64,19 +65,35 @@ class atom_t {
 
       bool is_fe() {
 
-         if (type == "Fe8i" || type == "Fe8j" || type == "Fe8f" || type == "Fe")
+         if (
+               type == "Fe8i" ||
+               type == "Fe8j" ||
+               type == "Fe8f" ||
+               type == "Fe" ||
+               type == "Fe16k1" ||
+               type == "Fe16k2" ||
+               type == "Fe8j1" ||
+               type == "Fe8j2" ||
+               type == "Fe4e" ||
+               type == "Fe4c")
+
             return true;
-         else
-            return false;
+
+         else return false;
 
       }
 
       bool is_re() {
 
-         if (type == "Nd" || type == "Sm")
+         if (
+               type == "Nd" ||
+               type == "Nd4f" ||
+               type == "Nd4g" ||
+               type == "Sm")
+
             return true;
-         else
-            return false;
+
+         else return false;
 
       }
 

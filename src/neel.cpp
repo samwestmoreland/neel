@@ -12,7 +12,7 @@
 
 int generate_supercell() {
 
-   std::cout << "replicating unit cell...";
+   std::cout << "replicating unit cell..." << std::endl;;
 
    int global_id = 0;
 
@@ -43,8 +43,6 @@ int generate_supercell() {
          }
       }
    }
-
-   std::cout << "done.\n";
 
    return EXIT_SUCCESS;
 
@@ -87,8 +85,6 @@ int populate_atom_eij_tensors() {
 
       }
    }
-
-   std::cout << "done.\n";
 
    return EXIT_SUCCESS;
 
@@ -229,7 +225,8 @@ int calculate_easy_axes() {
 
          }
 
-         fout << atom << "\t" << min_phi << "\t" << min_theta << "\n";
+         double phi_rad = min_phi / 180.0 * 3.14159;
+         fout << atom << "\t" << cos(phi_rad) << "\n";
    }
 
    std::cout << "data output to 'easy_axes.dat'\n";
