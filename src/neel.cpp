@@ -226,7 +226,7 @@ int calculate_easy_axes() {
          }
 
          double phi_rad = min_phi / 180.0 * 3.14159;
-         fout << atom << "\t" << cos(phi_rad) << "\n";
+         fout << atom << "\t" << unitcell[atom].pos.z << "\t" << cos(phi_rad) << "\n";
    }
 
    std::cout << "data output to 'easy_axes.dat'\n";
