@@ -1,429 +1,240 @@
-#include <cmath>
+#include <cstdlib>
+#include <string>
 #include <fstream>
 #include <iostream>
 #include <vector>
-#include <cstdlib>
-#include <ctime>
-#include "../hdr/classes.hpp"
+#include <cmath>
+#include <sstream>
 
-/* prototypes */
-namespace cal
-{
-   double dot(vec_t i, vec_t j);
-   double lij(int itype, int jtype, double r, bool constant);
-   void k_tensor(std::vector<atom_t> super, int ucsize, double rcut, bool constant);
-   void k_vec(std::vector<atom_t> uc, std::vector<atom_t> super, int ucsize, double rcut, bool constant);
-}
+#include "./data.hpp"
+#include "./classes.hpp"
+#include "./io.hpp"
 
-int main(int argc, char* argv[])
-{
-   /* set unit cell dimensions */
-   vec_t ucd;
-   ucd.x = 26.181;
-   ucd.y = 26.181;
-
-   /* set cut-off range */
-   double rcut = 5.0;
-
-   /* set name of coordinate file */
-   std::string c_file = "coordinate_files/run00d1_final_frame.coords";
-
-   std::ifstream coordfile;
-   coordfile.open (c_file.c_str());
-
-   if (!coordfile.is_open())
-   {
-      std::cout << "coordinate file \"" << c_file << "\" not found. exiting.\n";
-      exit(EXIT_FAILURE);
-   }
-
-   std::string elstring;
-   atom_t tmp;
-   int aidcount = 0;
-   std::vector<atom_t> uc;
-
-   int nd_count = 0;
-   int fe_count = 0;
-
-   /* system dimensions */
-   vec_t fe_min, fe_max;
-   vec_t nd_min, nd_max;
-   fe_min = 0;
-   fe_max = 0;
-   nd_min = 0;
-   nd_max = 0;
-
-   std::cout << "reading in coordinates...";
-
-   while (coordfile >> elstring >> tmp.pos.x >> tmp.pos.y >> tmp.pos.z)
-   {
-      tmp.aid = aidcount;
-      tmp.gid = aidcount;
-      ++aidcount;
-      tmp.k = 0;
-
-      /* determine min and max coordinates for each species */
-      if (elstring == "Fe")
-      {
-         tmp.type = 0;
-         fe_count ++;
-
-         if (tmp.pos.x < fe_min.x) fe_min.x = tmp.pos.x;
-         else if (tmp.pos.x > fe_max.x) fe_max.x = tmp.pos.x;
-         if (tmp.pos.y < fe_min.y) fe_min.y = tmp.pos.y;
-         else if (tmp.pos.y > fe_max.y) fe_max.y = tmp.pos.y;
-         if (tmp.pos.z < fe_min.z) fe_min.z = tmp.pos.z;
-         else if (tmp.pos.z > fe_max.z) fe_max.z = tmp.pos.z;
-      }
-      else if (elstring == "Nd")
-      {
-         tmp.type = 1;
-         nd_count ++;
-
-         if (tmp.pos.x < nd_min.x) nd_min.x = tmp.pos.x;
-         else if (tmp.pos.x > nd_max.x) nd_max.x = tmp.pos.x;
-         if (tmp.pos.y < nd_min.y) nd_min.y = tmp.pos.y;
-         else if (tmp.pos.y > nd_max.y) nd_max.y = tmp.pos.y;
-         if (tmp.pos.z < nd_min.z) nd_min.z = tmp.pos.z;
-         else if (tmp.pos.z > nd_max.z) nd_max.z = tmp.pos.z;
-      }
-
-      uc.push_back(tmp);
-   }
-
-   std::cout << "done" << "\n\n";
-
-   std::cout << "system info" << std::endl;
-   std::cout << "-----------" << std::endl;
-   std::cout << std::endl;
-   std::cout << "number of Fe atoms: " << fe_count << std::endl;
-   std::cout << "number of Nd atoms: " << nd_count << std::endl;
-   std::cout << "total number atoms: " << nd_count + fe_count << std::endl;
-   std::cout << std::endl;
-   std::cout << "cut off radius: " << rcut << "A" << std::endl;
-   std::cout << std::endl;
-   std::cout << "Fe atoms dimensions:" << std::endl;
-   std::cout << "x: " << fe_min.x << " - " << fe_max.x << std::endl;
-   std::cout << "y: " << fe_min.y << " - " << fe_max.y << std::endl;
-   std::cout << "z: " << fe_min.z << " - " << fe_max.z << std::endl;
-   std::cout << std::endl;
-   std::cout << "Nd atoms dimensions:" << std::endl;
-   std::cout << "x: " << nd_min.x << " - " << nd_max.x << std::endl;
-   std::cout << "y: " << nd_min.y << " - " << nd_max.y << std::endl;
-   std::cout << "z: " << nd_min.z << " - " << nd_max.z << std::endl;
-   std::cout << std::endl;
-
-   /* replicate uc */
+int generate_supercell() {
 
    std::cout << "replicating unit cell...";
-   std::vector<atom_t> super;
-   int gidcount = 0;
 
-   for (int i=0; i<3; ++i)
-   for (int j=0; j<3; ++j)
-   for (int site=0; site<uc.size(); ++site)
-   {
-      atom_t tmp;
+   int global_id = 0;
 
-      tmp.type  = uc[site].type;
-      tmp.aid   = uc[site].aid;
-      tmp.pos.x = uc[site].pos.x + i*ucd.x;
-      tmp.pos.y = uc[site].pos.y + j*ucd.y;
-      tmp.pos.z = uc[site].pos.z;
+   /* populate supercell using unitcell info */
+   for (int i=0; i<3; ++i) {
+      for (int j=0; j<3; ++j) {
+         for (int k=0; k<3; ++k) {
 
-      tmp.gid = gidcount;
-      ++gidcount;
+            for (int atom=0; atom<unitcell.size(); ++atom) {
 
-      tmp.k = 0;
+               atom_t tmp;
 
-      super.push_back(tmp);
+               tmp.type = unitcell[atom].type;
+
+               tmp.gid = global_id;
+               global_id ++;
+
+               tmp.id = unitcell[atom].id;
+
+               tmp.pos.x = unitcell[atom].pos.x + i * mat.ucd.x;
+               tmp.pos.y = unitcell[atom].pos.y + j * mat.ucd.y;
+               tmp.pos.z = unitcell[atom].pos.z + k * mat.ucd.z;
+
+               supercell.push_back(tmp);
+
+            }
+
+         }
+      }
    }
 
-   std::cout << "done\n";
-   std::cout << "total atoms in super cell: " << super.size() << std::endl;
-   std::cout << std::endl;
-   std::cout << "outputting super cell coordinates to supercell.xyz\n";
-
-   std::ofstream superxyz ("supercell.xyz");
-   superxyz << super.size() << "\n\n\n";
-   for (int i=0; i<super.size(); ++i)
-   {
-      if (super[i].type == 0) superxyz << "Fe\t";
-      else if (super[i].type == 1) superxyz << "Nd\t";
-
-      superxyz << super[i].pos.x << "\t"
-               << super[i].pos.y << "\t"
-               << super[i].pos.z << "\n";
-   }
-
-   std::cout << "\ncalculating using vector method...\n\n";
-
-   std::clock_t start_vector;
-   double vector_duration;
-
-   start_vector = std::clock();
-
-   cal::k_vec(uc, super, uc.size(), rcut, false);
-
-   vector_duration = (std::clock() - start_vector) / (double) CLOCKS_PER_SEC;
-
-   std::cout << "\ncalculating using tensor method...\n\n";
-
-   std::clock_t start_tensor;
-   double tensor_duration;
-
-   start_tensor = std::clock();
-
-   cal::k_tensor(super, uc.size(), rcut, false);
-
-   tensor_duration = (std::clock() - start_tensor) / (double) CLOCKS_PER_SEC;
-
-   std::cout << "vector calculation time: " << vector_duration << "s" << std::endl;
-   std::cout << "tensor calculation time: " << tensor_duration << "s" << std::endl;
-   std::cout << std::endl;
+   std::cout << "done.\n";
 
    return EXIT_SUCCESS;
+
 }
 
-namespace cal
-{
-   double lij(int itype,         // atom i element
-              int jtype,         // atom j element
-              double r,          // atom separation
-              bool constant ) {  // constant lij or distance dependent
+int populate_atom_eij_tensors() {
 
-      double lij;
+   std::cout << "populating eij tensors..." << std::endl;
 
-      if (constant) {
-         lij = 1.0;
-      }
+   /* determine beginning and end of central cell */
+   int start = (supercell.size() - unitcell.size())/2;
+   int end = (supercell.size() + unitcell.size())/2;
 
-      else {
-         double r0;
-         double l0;
+   double pair_count = 0;
 
-         r0 = 2.5;
-         l0 = -1.0e-23;
+   /* loop through central cell */
+   for (int i=start; i<end; ++i) {
 
-         /* fe (fe-fe or both fe-fe and fe-nd) */
-         if (itype == 0) lij = l0*exp(-r/r0);
+      /* loop through all atoms in supercell */
+      for (int j=0; j<supercell.size(); ++j) {
 
-         /* nd */
-         else if (itype == 1) lij = l0*exp(-r/r0);
+         /* create a pair with these two atoms */
+         pair_t temp_pair;
 
-         else lij = 0;
-      }
+         temp_pair.atomi = supercell[i];
+         temp_pair.atomj = supercell[j];
 
-      return lij;
-   }
+         if ((temp_pair.rij() <= sim.rcut) && (!temp_pair.are_same_atom())) {
 
-   double dot(vec_t i, vec_t j) {
-      return i.x*j.x + i.y*j.y + i.z*j.z;
-   }
+            vec_t eij = temp_pair.eij();
 
-   void k_vec (std::vector<atom_t> uc,
-               std::vector<atom_t> super,
-               int ucsize,
-               double rcut,
-               bool constant) {
+            unitcell[i-start].ktensor[0] = eij.x * eij.x * temp_pair.lij();
+            unitcell[i-start].ktensor[1] = eij.x * eij.y * temp_pair.lij();
+            unitcell[i-start].ktensor[2] = eij.x * eij.z * temp_pair.lij();
+            unitcell[i-start].ktensor[3] = eij.y * eij.y * temp_pair.lij();
+            unitcell[i-start].ktensor[4] = eij.y * eij.z * temp_pair.lij();
+            unitcell[i-start].ktensor[5] = eij.z * eij.z * temp_pair.lij();
 
-      /* determine beginning and end of centre cell */
-      int start = (super.size() - ucsize)/2;
-      int end = (super.size() + ucsize)/2;
-
-      double knd_hard = 0;
-      double knd_easy = 0;
-
-      double kfe_hard = 0;
-      double kfe_easy = 0;
-
-      double knd;
-      double kfe;
-
-      /* hard direction */
-      vec_t hard;
-      hard.x = 1;
-      hard.y = 0;
-      hard.z = 0;
-
-      /* easy direction */
-      vec_t easy;
-      easy.x = 0;
-      easy.y = 0;
-      easy.z = 1;
-
-      /* initialise arrays for atom resolved hard and easy energies */
-      std::vector<double> k_hard_atom(ucsize, 0);
-      std::vector<double> k_easy_atom(ucsize, 0);
-
-      /* loop through centre cell */
-      for (int i=start; i<end; ++i)
-
-         /* loop through all atoms */
-         for (int j=0; j<super.size(); ++j)
-         {
-            /* calculate neighbour vector */
-            vec_t eij = super[j].pos - super[i].pos;
-
-            /* calculate neighbour distance */
-            double rij = eij.length();
-
-            /* check if atom is within cut off range */
-            if (rij <= rcut && rij > 1e-35)
-            {
-               /* add energy to hard energy array */
-               k_hard_atom[i-start] += cal::lij(super[i].type, super[j].type, rij, constant) * dot(hard, eij) * dot(hard, eij);
-
-               /* add energy to easy energy array */
-               k_easy_atom[i-start] += cal::lij(super[i].type, super[j].type, rij, constant) * dot(easy, eij) * dot(easy, eij);
-
-                  //  std::cout <<
-                  //      cal::lij(super[i].type, super[j].type, rijk)
-                  //      * dot(hard, eij) * dot(hard, eij) << std::endl;
-
-               /* if atom is Nd */
-               if (super[i].type == 1)
-               {
-                  /* add interaction energy to total hard energy */
-                  knd_hard += cal::lij(super[i].type, super[j].type, rij, constant) * dot(hard, eij) * dot(hard, eij);
-
-                  /* add interaction energy to total easy energy */
-                  knd_easy += cal::lij(super[i].type, super[j].type, rij, constant) * dot(easy, eij) * dot(easy, eij);
-               }
-
-               /* if atom is Fe */
-               else if (super[i].type == 0)
-               {
-                  kfe_hard += cal::lij(super[i].type, super[j].type, rij, constant) * dot(hard, eij) * dot(hard, eij);
-
-                  kfe_easy += cal::lij(super[i].type, super[j].type, rij, constant) * dot(easy, eij) * dot(easy, eij);
-               }
-            }
          }
 
-      /* divide by factor 2, as per neel expression */
-      knd_hard /= 2.0;
-      knd_easy /= 2.0;
-      kfe_hard /= 2.0;
-      kfe_easy /= 2.0;
-
-      /* k is then the difference between hard and easy energies */
-      knd = (knd_hard - knd_easy);
-      kfe = (kfe_hard - kfe_easy);
-
-      double ktotal = knd + kfe;
-
-      /* output stream for atom resolved energies */
-      std::ofstream kout ("k.dat");
-
-      for (int i=0; i<ucsize; ++i)
-      {
-         // if (uc[i].type == 1)
-         kout << i << "\t"                         //	   1	atom id
-              << uc[i].type << "\t"                //	   2	atom type
-              << uc[i].pos.z << "\t"               //	   3	z coordinate
-              << k_hard_atom[i] << "\t"            //	   4	hard energy
-              << k_easy_atom[i] << "\t"				//	   5	easy energy
-              << k_hard_atom[i] - k_easy_atom[i]	//	   6	anisotropy energy
-              << std::endl;
       }
-
-      std::cout << "knd_hard = " << knd_hard << "\n";
-      std::cout << "knd_easy = " << knd_easy << "\n";
-      std::cout << "knd = " << knd << "\n\n";
-
-      std::cout << "kfe_hard = " << kfe_hard << "\n";
-      std::cout << "kfe_easy = " << kfe_easy << "\n";
-      std::cout << "kfe = " << kfe << "\n\n";
-
-      std::cout << "k = " << ktotal << "\n";
    }
 
-   void k_tensor(std::vector<atom_t> super, int ucsize, double rcut, bool constant)
-   {
-      int start = (super.size() - ucsize)/2;
-      int end = (super.size() + ucsize)/2;
+   std::cout << "done.\n";
 
-      /* initialise system tensor */
-      std::vector<double> system_tensor (6, 0);
+   return EXIT_SUCCESS;
 
-      /* initialise tensor for every atom */
-      std::vector<std::vector<double> > tensor (ucsize);
+}
 
-      for (int i=0; i<ucsize; ++i) {
-         tensor[i].resize(6);
-      }
+int calculate_k() {
 
-      /* temporary file stream for tensor output */
-      std::ofstream tensor_out ("tensor.dat");
+   std::cout << "calculating neel anisotropy using vector method...\n\n";
 
-      // int pairs_within_range = 0;
+   for (int atom=0; atom<unitcell.size(); ++atom) {
 
-      /* loop through centre cell */
-      for (int i=start; i<end; ++i) {
+//      if (unitcell[atom].is_re()) {
 
-         /* loop through all atoms */
-         for (int j=0; j<super.size(); ++j) {
+         std::ostringstream id_string;
+         id_string << atom;
 
-            /* check atom is within cut off */
-            vec_t eij = super[j].pos - super[i].pos;
-            double rij = eij.length();
-            if (rij < rcut && rij > 1e-35) {
+         std::string filename = unitcell[atom].type + id_string.str() + ".dat";
 
-               // pairs_within_range ++;
-               double lij = cal::lij(super[i].type, super[j].type, rij, constant);
+         std::ofstream fout (filename);
 
-               tensor[i-start][0] += eij.x * eij.x * lij;
-               tensor[i-start][1] += eij.x * eij.y * lij;
-               tensor[i-start][2] += eij.x * eij.z * lij;
-               tensor[i-start][3] += eij.y * eij.y * lij;
-               tensor[i-start][4] += eij.y * eij.z * lij;
-               tensor[i-start][5] += eij.z * eij.z * lij;
+         /* polar angle */
+         for (int phi=0; phi<=180; phi+=sim.angle_increment) {
 
-               system_tensor[0] += eij.x * eij.x * lij;
-               system_tensor[1] += eij.x * eij.y * lij;
-               system_tensor[2] += eij.x * eij.z * lij;
-               system_tensor[3] += eij.y * eij.y * lij;
-               system_tensor[4] += eij.y * eij.z * lij;
-               system_tensor[5] += eij.z * eij.z * lij;
+            /* azimuthal angle */
+            for (int theta=0; theta <=360; theta+=sim.angle_increment) {
+
+               /* convert angle to radians */
+               double phi_rad = phi / 180.0 * 3.14159;
+               double theta_rad = theta / 180.0 * 3.14159;
+
+               /* convert to cartesian */
+               vec_t cart;
+               cart.x = cos(theta_rad) * sin(phi_rad);
+               cart.y = sin(theta_rad) * sin(phi_rad);
+               cart.z = cos(phi_rad);
+
+               vec_t temp_vector;
+
+               /* col 1 */
+               temp_vector.x = cart.x * unitcell[atom].ktensor[0]
+                             + cart.y * unitcell[atom].ktensor[1]
+                             + cart.z * unitcell[atom].ktensor[2];
+
+               /* col 2 */
+               temp_vector.y = cart.x * unitcell[atom].ktensor[1]
+                             + cart.y * unitcell[atom].ktensor[3]
+                             + cart.z * unitcell[atom].ktensor[4];
+
+               /* col 3 */
+               temp_vector.z = cart.x * unitcell[atom].ktensor[2]
+                             + cart.y * unitcell[atom].ktensor[4]
+                             + cart.z * unitcell[atom].ktensor[5];
+
+               double k = temp_vector.x * cart.x +
+                          temp_vector.y * cart.y +
+                          temp_vector.z * cart.z;
+
+               fout << phi << "\t"
+                    << theta << "\t"
+                    << k << "\n";
 
             }
 
+            fout << "\n";
 
-         } /* end of neighbour loop */
+         }
 
-         tensor_out << i-start << "\t";
-         tensor_out << tensor[i-start][0] << "\t";
-         tensor_out << tensor[i-start][1] << "\t";
-         tensor_out << tensor[i-start][2] << "\t";
-         tensor_out << tensor[i-start][3] << "\t";
-         tensor_out << tensor[i-start][4] << "\t";
-         tensor_out << tensor[i-start][5] << "\n";
+         std::cout << "data output to " << filename << std::endl;
 
-      } /* end of first atom loop */
+//      }
+   }
 
-      std::cout << "tensor elements: \n";
-      for (int element=0; element<6; ++element) {
-         std::cout << "tensor[" << element << "] = " << system_tensor[element] << "\n";
-      }
 
-      std::cout << std::endl;
- 
-      /*
-       * because we're just considering hard and easy directions,
-       * lots of terms cancel and we end up only needing
-       * two tensor elements
-       */
- 
-         double k_hard = system_tensor[0] / 2.0;
-         double k_easy = system_tensor[5] / 2.0;
-         double k = (k_hard - k_easy);
+   return EXIT_SUCCESS;
 
-         std::cout << "k_hard = " << k_hard << "\n";
-         std::cout << "k_easy = " << k_easy << "\n";
-         std::cout << "k = " << k << "\n\n";
-         // std::cout << "pairs in range = " << pairs_within_range << "\n";
+}
 
-      }
+int calculate_easy_axes() {
 
-} /* end of namespace cal */
+   std::cout << "calculating neel anisotropy using vector method...\n\n";
+
+   std::ofstream fout ("easy_axes.dat");
+
+   for (int atom=0; atom<unitcell.size(); ++atom) {
+
+      double min_energy = 10000;
+      double min_phi;
+      double min_theta;
+
+         /* polar angle */
+         for (int phi=0; phi<=180; phi+=sim.angle_increment) {
+
+            /* azimuthal angle */
+            for (int theta=0; theta <=360; theta+=sim.angle_increment) {
+
+               /* convert angle to radians */
+               double phi_rad = phi / 180.0 * 3.14159;
+               double theta_rad = theta / 180.0 * 3.14159;
+
+               /* convert to cartesian */
+               vec_t cart;
+               cart.x = cos(theta_rad) * sin(phi_rad);
+               cart.y = sin(theta_rad) * sin(phi_rad);
+               cart.z = cos(phi_rad);
+
+               vec_t temp_vector;
+
+               /* col 1 */
+               temp_vector.x =
+                  cart.x * unitcell[atom].ktensor[0] +
+                  cart.y * unitcell[atom].ktensor[1] +
+                  cart.z * unitcell[atom].ktensor[2];
+
+               /* col 2 */
+               temp_vector.y =
+                  cart.x * unitcell[atom].ktensor[1] +
+                  cart.y * unitcell[atom].ktensor[3] +
+                  cart.z * unitcell[atom].ktensor[4];
+
+               /* col 3 */
+               temp_vector.z =
+                  cart.x * unitcell[atom].ktensor[2] +
+                  cart.y * unitcell[atom].ktensor[4] +
+                  cart.z * unitcell[atom].ktensor[5];
+
+               double k =
+                  temp_vector.x * cart.x +
+                  temp_vector.y * cart.y +
+                  temp_vector.z * cart.z;
+
+               if (k < min_energy) {
+                  min_energy = k;
+                  min_phi = phi;
+                  min_theta = theta;
+               }
+
+            }
+
+         }
+
+         fout << atom << "\t" << min_phi << "\t" << min_theta << "\n";
+   }
+
+   std::cout << "data output to 'easy_axes.dat'\n";
+
+
+   return EXIT_SUCCESS;
+
+}
